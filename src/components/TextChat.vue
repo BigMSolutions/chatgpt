@@ -4,9 +4,9 @@
       <q-chat-message
         v-for="m in messages"
         :key="m.index"
-        :name="m.sender"
-        :text="[m.message]"
-        :sent="m.sender != 'chatgpt'"
+        :name="m.role"
+        :text="[m.content]"
+        :sent="m.role == 'user'"
       />
     </div>
   </div>
