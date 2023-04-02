@@ -1,12 +1,28 @@
 <template>
   <q-page class="">
-    <chat :messages="messages" />
+    <chat :messages="messages" :isLoading="isLoading" />
   </q-page>
-  <q-footer elevated class="bg-white text-black">
-    <div class="row">
-      <q-input outlined v-model="text" label="Outlined" />
-      <q-btn color="primary" icon="send" flat />
-    </div>
+  <q-footer>
+    <q-form @submit="sendPrompt()">
+      <q-toolbar class="bg-grey-3 text-black row">
+        <q-input
+          rounded
+          outlined
+          dense
+          class="WAL__field col-grow q-mr-sm"
+          bg-color="white"
+          v-model="input"
+          placeholder="Type a message"
+          lazy-rules
+          :rules="[
+            (val) =>
+              (val && val.length > 3) ||
+              'Please type something over 3 chars long',
+          ]"
+        />
+        <q-btn round flat icon="send" type="submit" />
+      </q-toolbar>
+    </q-form>
   </q-footer>
 </template>
 
@@ -19,20 +35,8 @@ export default {
   data() {
     return {
       sender: "mossaab",
-      messages: [
-        {
-          role: "user",
-          content: "Who won the world series in 2020?",
-        },
-        {
-          role: "assistant",
-          content: "The Los Angeles Dodgers won the World Series in 2020.",
-        },
-        {
-          role: "user",
-          content: "Where was it played?",
-        },
-      ],
+      input: "",
+      messages: [],
       settings: {
         model: "gpt-3.5-turbo",
         temperature: 1,
@@ -44,27 +48,43 @@ export default {
         frequency_penalty: 0,
       },
       token: "",
+      isLoading: false,
     };
   },
   methods: {
     sendPrompt() {
-      var myHeaders = new Headers();
-      myHeaders.append("Authorization", "Bearer " + this.token);
-      myHeaders.append("Content-Type", "application/json");
+      if (this.input.length > 3) {
+        this.messages.push({
+          role: "user",
+          content: this.input,
+        });
+        this.isLoading = true;
+        this.input = "";
+        var myHeaders = new Headers();
+        myHeaders.append("Authorization", "Bearer " + this.token);
+        myHeaders.append("Content-Type", "application/json");
 
-      var raw = JSON.stringify({ messages, ...settings });
+        var raw = JSON.stringify({ messages: this.messages, ...this.settings });
 
-      var requestOptions = {
-        method: "POST",
-        headers: myHeaders,
-        body: raw,
-        redirect: "follow",
-      };
+        var requestOptions = {
+          method: "POST",
+          headers: myHeaders,
+          body: raw,
+          redirect: "follow",
+        };
 
-      fetch("https://api.openai.com/v1/chat/completions", requestOptions)
-        .then((response) => response.text())
-        .then((result) => console.log(result))
-        .catch((error) => console.log("error", error));
+        fetch("https://api.openai.com/v1/chat/completions", requestOptions)
+          .then(async (response) => {
+            let r = JSON.parse(await response.text());
+            this.messages.push(r.choices[0].message);
+            this.isLoading = false;
+          })
+          .catch((error) => {
+            this.isLoading = false;
+            console.log("error", error);
+          });
+      } else {
+      }
     },
   },
 };
